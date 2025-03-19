@@ -554,6 +554,9 @@ class PrologKernelBaseImplementation:
         if 'print_table' in dict:
             if self.handle_print_table(dict['print_table']):
                 failure_keys.append(['print_table'])
+        if 'print_tree' in dict:
+            if self.handle_print_graph(dict['print_tree']):
+                failure_keys.append(['print_tree'])
         if 'print_transition_graph' in dict:
             if self.handle_print_graph(dict['print_transition_graph']):
                 failure_keys.append(['print_transition_graph'])

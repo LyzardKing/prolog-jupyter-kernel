@@ -92,6 +92,9 @@ jupyter:print_table(_ValuesLists, _VariableNames) :-
 jupyter:print_transition_graph(_PredSpec, _FromIndex, _ToIndex, _LabelIndex) :-
   throw(jupyter(no_single_goal(jupyter:print_transition_graph/4))).
 
+% jupyter:print_transition_graph(+PredSpec, +FromIndex, +ToIndex, +LabelIndex)
+jupyter:print_tree(_File) :-
+  throw(jupyter(no_single_goal(jupyter:print_tree/1))).
 
 % jupyter:update_completion_data
 jupyter:update_completion_data :-

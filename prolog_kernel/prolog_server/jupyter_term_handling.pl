@@ -515,6 +515,7 @@ is_query_alias(halt,jupyter:halt).
 is_query_alias(swi,jupyter:set_prolog_impl(swi)) :- \+ current_predicate(user:swi/0).
 is_query_alias(sicstus,jupyter:set_prolog_impl(sicstus)) :-  \+ current_predicate(user:sicstus/0).
 is_query_alias(show_graph(Nodes,Edges),jupyter:show_graph(Nodes,Edges)) :-  \+ current_predicate(user:show_graph/2).
+is_query_alias(print_tree(File),jupyter:print_tree(File)) :-  \+ current_predicate(user:print_tree/1).
 is_query_alias(show_term(Term),
           jupyter:show_graph(jupyter_term_handling:dot_subnode(_,_,Term),
                              jupyter_term_handling:dot_subtree/3)) :-  \+ current_predicate(user:show_term/1).
@@ -566,6 +567,9 @@ handle_query_term_(jupyter:print_transition_graph(PredSpec, FromIndex, ToIndex),
 handle_query_term_(jupyter:show_graph(NodeSpec,PredSpec),
                   _IsDirective, _CallRequestId, _Stack, _Bindings, _OriginalTermData, _LoopCont, continue) :- !,
   handle_print_transition_graph(NodeSpec,PredSpec).
+handle_query_term_(jupyter:print_tree(Goal),
+                  _IsDirective, _CallRequestId, _Stack, _Bindings, _OriginalTermData, _LoopCont, continue) :- !,
+  handle_print_tree(Goal, Bindings).
 handle_query_term_(jupyter:set_prolog_impl(PrologImplementationID), _IsDirective, _CallRequestId, _Stack,
                    _Bindings, _OriginalTermData, _LoopCont, continue) :- !,
   handle_set_prolog_impl(PrologImplementationID).
@@ -1157,6 +1161,36 @@ assert_sld_data(call, MGoal, Current, Parent) :-
 assert_sld_data(_Port, _MGoal, _Current, _Parent) :-
   collect_sld_data. % SLD data is to be collected, but not for ports other than call
 
+% :- use_module(library(apply)).
+% :- use_module(library(gv)).
+:- use_module(library(dot)).
+% :- use_module(library(yall)).
+:- use_module(library(term_ext)).
+
+export_tree(Out, Tree, Id) :-
+  Tree =.. [Op|Trees],
+  ascii_id(Id),
+  dot_node_id(Out, Id, [label(Op)]),
+  maplist(export_tree(Out), Trees, Ids),
+  maplist(dot_edge_id(Out, Id), Ids).
+
+dcg_tree_content(Goal, GraphFileContentAtom) :-
+  with_output_to(string(NodesAndEdges),
+    (
+      current_output(Out), export_tree(Out, Goal, _)
+    )
+  ),
+  string_concat(NodesAndEdges, '}', NodesAndEdgesWithClosingBracket),
+  string_concat('graph {\n', NodesAndEdgesWithClosingBracket, GraphFileContentAtom).
+
+handle_print_tree(Goal, Bindings) :-
+  catch(dcg_tree_content(Goal, GraphFileContentAtom), Exception, true),
+  ( nonvar(Exception) ->
+    !,
+    assert_error_response(exception, message_data(error, Exception), '', [])
+  ;
+    assert_success_response(query, [], '', [print_tree=GraphFileContentAtom])
+  ).
 
 % handle_print_sld_tree(+Goal, +Bindings)
 handle_print_sld_tree(Goal, Bindings) :-
